@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horarios Compartidos</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Horarios Universitarios 📅</h1>
+        
+        <!-- SECCIÓN 1: INGRESAR HORARIO -->
+        <div class="card">
+            <h2>1. Ingresar Mi Horario</h2>
+            <div class="form-group">
+                <input type="text" id="nombre" placeholder="Tu nombre (ej. Daniela)">
+            </div>
+            <p class="instruccion">Escribe el nombre de tu clase en los bloques correspondientes. Si solo quieres marcarlo como ocupado, pon una "X". Deja en blanco tus horas libres.</p>
+            
+            <div class="table-responsive">
+                <table id="tabla-ingreso">
+                    <!-- Se genera con JS -->
+                </table>
+            </div>
+            <button onclick="guardarMiHorario()" class="btn-primary" style="margin-top: 15px; width: 100%;">Guardar mi horario</button>
+        </div>
+
+        <!-- SECCIÓN 2: VISUALIZADOR DE HORARIOS -->
+        <div class="card">
+            <h2>2. Navegador de Horarios</h2>
+            <p class="instruccion">Selecciona a alguien para ver su horario completo:</p>
+            <div class="form-group">
+                <select id="selector-ver-horario" onchange="mostrarHorarioIndividual()">
+                    <option value="">-- Elige un horario --</option>
+                </select>
+            </div>
+            <div class="table-responsive" id="contenedor-horario-individual">
+                <!-- Aquí se renderiza el horario de la persona seleccionada -->
+            </div>
+            <button onclick="limpiarDatos()" class="btn-danger">Borrar Todos los Datos Guardados</button>
+        </div>
+
+        <!-- SECCIÓN 3: COMPARADOR GLOBAL -->
+        <div class="card">
+            <h2>3. Encontrar Huecos Libres</h2>
+            <p class="instruccion">Selecciona a las personas que quieres cruzar:</p>
+            <div id="selector-comparacion" class="checkbox-group"></div>
+            <button onclick="compararHorarios()">Buscar Horas en Común</button>
+            
+            <div id="resultados" class="resultados"></div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

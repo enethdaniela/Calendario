@@ -1,0 +1,82 @@
+:root {
+    --primary: #6c5ce7;
+    --background: #f5f6fa;
+    --card-bg: #ffffff;
+    --text: #2d3436;
+    --occupied: #a29bfe; /* Color para las clases */
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--background);
+    color: var(--text);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.container {
+    max-width: 900px;
+    width: 100%;
+}
+
+h1 { text-align: center; color: var(--primary); }
+
+.card {
+    background: var(--card-bg);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    margin-bottom: 25px;
+}
+
+.form-group { display: flex; gap: 10px; margin-bottom: 15px; }
+input[type="text"], select { 
+    flex: 1; padding: 10px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 16px; 
+}
+
+button {
+    padding: 12px 20px; background-color: var(--primary); color: white;
+    border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px;
+    transition: 0.2s;
+}
+button:hover { opacity: 0.9; transform: translateY(-1px); }
+
+.btn-danger { background-color: #d63031; margin-top: 20px; width: 100%; font-size: 14px; }
+.instruccion { margin-bottom: 15px; font-size: 14px; color: #636e72; line-height: 1.5; }
+
+/* Tablas */
+.table-responsive { overflow-x: auto; margin-bottom: 10px; }
+table { width: 100%; border-collapse: collapse; min-width: 600px; table-layout: fixed; }
+th, td { border: 1px solid #dfe6e9; padding: 5px; text-align: center; height: 50px; }
+th { background-color: #f1f2f6; font-size: 14px; padding: 10px; }
+.td-hora { font-weight: bold; background-color: #f1f2f6; font-size: 13px; width: 110px; }
+
+/* Inputs dentro de la tabla */
+.input-clase {
+    width: 100%; height: 100%; border: none; background: transparent; 
+    text-align: center; font-size: 13px; box-sizing: border-box; outline: none;
+    resize: none; font-family: inherit;
+}
+.input-clase:focus { background-color: #f8f9fa; }
+
+/* Celdas ocupadas en el visualizador */
+.celda-ocupada {
+    background-color: var(--occupied);
+    color: white;
+    font-weight: bold;
+    font-size: 13px;
+    border-radius: 4px;
+    padding: 5px;
+}
+
+.checkbox-group { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; }
+.dia-libre {
+    background: #e8f8f5; padding: 15px; border-left: 4px solid #1abc9c;
+    margin-bottom: 10px; border-radius: 4px; line-height: 1.6;
+}
+.bloque-libre {
+    display: inline-block; background: #1abc9c; color: white; padding: 6px 10px;
+    border-radius: 6px; margin: 3px; font-size: 14px; font-weight: bold;
+}
