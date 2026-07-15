@@ -1,12 +1,42 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+// ==========================================
+// 1. CONFIGURACIÓN DE FIREBASE
+// REEMPLAZA ESTE BLOQUE CON TU firebaseConfig
+// ==========================================
+const firebaseConfig = {
+  apiKey: "TU_API_KEY",
+  authDomain: "horarios-amigas.firebaseapp.com",
+  databaseURL: "TU_DATABASE_URL",
+  projectId: "horarios-amigas",
+  storageBucket: "horarios-amigas.appspot.com",
+  messagingSenderId: "TU_SENDER_ID",
+  appId: "TU_APP_ID"
+};
+
+// Inicializar Firebase
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// ==========================================
+// 2. LÓGICA DE LA APLICACIÓN
+// ==========================================
 const bloques = [
     "07:00 - 08:20", "08:30 - 09:50", "10:00 - 11:20", 
     "11:30 - 12:50", "13:00 - 14:20", "14:30 - 15:50", 
     "16:00 - 17:20", "17:30 - 18:50"
 ];
 const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
+let datosHorarios = {};
 
-// Cambiamos el nombre de la llave en localStorage para no chocar con la versión anterior
-let datosHorarios = JSON.parse(localStorage.getItem('horariosCompletos')) || {};
+// Escuchar cambios en la base de datos en tiempo real
+const horariosRef = ref(db, 'horarios');
+onValue(horariosRef, (snapshot) => {
+    const data = snapshot.val();
+    datosHorarios = data || {};
+    actualizarUI();
+});
 
 function inicializarTablaIngreso() {
     const tabla = document.getElementById('tabla-ingreso');
@@ -37,54 +67,51 @@ function guardarMiHorario() {
     bloques.forEach((bloque, filaIdx) => {
         dias.forEach((dia, colIdx) => {
             const inputVal = document.getElementById(`slot-${filaIdx}-${colIdx}`).value.trim();
-            // Guardamos el texto escrito, o cadena vacía si está libre
             horarioUsuario[dia][bloque] = inputVal; 
         });
     });
 
-    datosHorarios[nombre] = horarioUsuario;
-    localStorage.setItem('horariosCompletos', JSON.stringify(datosHorarios));
-    
-    alert(`¡Horario de ${nombre} guardado exitosamente!`);
-    document.getElementById('nombre').value = '';
-    
-    // Limpiar celdas
-    document.querySelectorAll('.input-clase').forEach(input => input.value = '');
-    actualizarUI();
+    // Guardar en Firebase en lugar de localStorage
+    set(ref(db, 'horarios/' + nombre), horarioUsuario)
+        .then(() => {
+            alert(`¡Horario de ${nombre} guardado en la nube!`);
+            document.getElementById('nombre').value = '';
+            document.querySelectorAll('.input-clase').forEach(input => input.value = '');
+        })
+        .catch((error) => {
+            alert("Error al guardar: " + error);
+        });
 }
 
 function actualizarUI() {
     const selectorVer = document.getElementById('selector-ver-horario');
     const selectorComp = document.getElementById('selector-comparacion');
     
-    // Guardamos la selección actual del visor para no perderla al actualizar
     const seleccionActual = selectorVer.value;
 
     selectorVer.innerHTML = '<option value="">-- Elige un horario --</option>';
     selectorComp.innerHTML = '';
 
     Object.keys(datosHorarios).forEach(nombre => {
-        // Agregar al selector de visualización
         const option = document.createElement('option');
         option.value = nombre;
         option.innerText = nombre;
         selectorVer.appendChild(option);
 
-        // Agregar al selector de comparación
         const label = document.createElement('label');
         label.innerHTML = `<input type="checkbox" value="${nombre}" checked> ${nombre}`;
         selectorComp.appendChild(label);
     });
 
     selectorVer.value = seleccionActual;
-    mostrarHorarioIndividual(); // Refrescar la tabla si hay alguien seleccionado
+    mostrarHorarioIndividual(); 
 }
 
 function mostrarHorarioIndividual() {
     const nombre = document.getElementById('selector-ver-horario').value;
     const contenedor = document.getElementById('contenedor-horario-individual');
     
-    if (!nombre) {
+    if (!nombre || !datosHorarios[nombre]) {
         contenedor.innerHTML = '<p style="text-align:center; color:#b2bec3;">Selecciona un nombre arriba para ver su horario.</p>';
         return;
     }
@@ -112,11 +139,9 @@ function mostrarHorarioIndividual() {
 }
 
 function limpiarDatos() {
-    if(confirm("¿Estás segura de borrar todos los horarios? Esta acción no se puede deshacer.")) {
-        datosHorarios = {};
-        localStorage.setItem('horariosCompletos', JSON.stringify(datosHorarios));
+    if(confirm("¿Estás segura de borrar todos los horarios de la nube?")) {
+        remove(ref(db, 'horarios'));
         document.getElementById('resultados').innerHTML = '';
-        actualizarUI();
     }
 }
 
@@ -136,21 +161,30 @@ function compararHorarios() {
 
     dias.forEach(dia => {
         let bloquesLibresDelDia = [];
+        let primerBloqueOcupadoIndex = -1;
 
-        bloques.forEach(bloque => {
-            let bloqueOcupadoPorAlguien = false;
+        // 1. Encontrar cuál es la PRIMERA clase del día para este grupo de personas
+        for (let i = 0; i < bloques.length; i++) {
+            let bloque = bloques[i];
+            let alguienTieneClase = seleccionadas.some(nombre => datosHorarios[nombre][dia][bloque]);
+            if (alguienTieneClase) {
+                primerBloqueOcupadoIndex = i;
+                break;
+            }
+        }
 
-            seleccionadas.forEach(nombre => {
-                // Si la persona tiene cualquier texto en ese bloque, se considera ocupado
-                if (datosHorarios[nombre][dia][bloque]) {
-                    bloqueOcupadoPorAlguien = true;
-                }
-            });
+        // Si nadie tiene clases en todo el día, ignoramos el día entero para no mostrar desde las 7:00 AM
+        if (primerBloqueOcupadoIndex === -1) return;
+
+        // 2. Buscar huecos libres SOLO desde la hora de la primera clase en adelante
+        for (let i = primerBloqueOcupadoIndex; i < bloques.length; i++) {
+            let bloque = bloques[i];
+            let bloqueOcupadoPorAlguien = seleccionadas.some(nombre => datosHorarios[nombre][dia][bloque]);
 
             if (!bloqueOcupadoPorAlguien) {
                 bloquesLibresDelDia.push(bloque);
             }
-        });
+        }
 
         if (bloquesLibresDelDia.length > 0) {
             huboCoincidencias = true;
@@ -168,6 +202,11 @@ function compararHorarios() {
     }
 }
 
-// Inicializar la tabla y la interfaz al cargar la página
+// Asignar eventos a los botones
+document.getElementById('btn-guardar').addEventListener('click', guardarMiHorario);
+document.getElementById('btn-borrar').addEventListener('click', limpiarDatos);
+document.getElementById('btn-comparar').addEventListener('click', compararHorarios);
+document.getElementById('selector-ver-horario').addEventListener('change', mostrarHorarioIndividual);
+
+// Iniciar
 inicializarTablaIngreso();
-actualizarUI();
