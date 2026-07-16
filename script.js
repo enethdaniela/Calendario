@@ -6,13 +6,13 @@ import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/
 // REEMPLAZA ESTE BLOQUE CON TU firebaseConfig
 // ==========================================
 const firebaseConfig = {
-  apiKey: "TU_API_KEY",
+  apiKey: "AIzaSyB81esQijTVdreLMWKgwTQElS9P56W5mME",
   authDomain: "horarios-amigas.firebaseapp.com",
-  databaseURL: "TU_DATABASE_URL",
   projectId: "horarios-amigas",
-  storageBucket: "horarios-amigas.appspot.com",
-  messagingSenderId: "TU_SENDER_ID",
-  appId: "TU_APP_ID"
+  storageBucket: "horarios-amigas.firebasestorage.app",
+  messagingSenderId: "575018759883",
+  appId: "1:575018759883:web:34d1692b7b28a09a62cd4e",
+  measurementId: "G-DKBGYCV7Q7"
 };
 
 // Inicializar Firebase
