@@ -9,6 +9,16 @@
 <body>
     <div class="container">
         <h1>Horarios Universitarios ☁️</h1>
+
+        <!-- NUEVA SECCIÓN: SALAS / GRUPOS -->
+        <div class="card" style="border: 2px solid var(--primary);">
+            <h2>🔑 Unirse a un Grupo</h2>
+            <div class="form-group">
+                <input type="text" id="nombre-sala" placeholder="Ej. amigas, proyecto, etc.">
+                <button id="btn-unirse">Entrar</button>
+            </div>
+            <p id="estado-sala" class="instruccion">🔴 No estás en ningún grupo. Escribe un nombre arriba.</p>
+        </div>
         
         <div class="card">
             <h2>1. Ingresar Mi Horario</h2>
@@ -32,7 +42,7 @@
                 </select>
             </div>
             <div class="table-responsive" id="contenedor-horario-individual"></div>
-            <button id="btn-borrar" class="btn-danger">Borrar Todos los Datos de la Nube</button>
+            <button id="btn-borrar" class="btn-danger">Borrar Todos los Datos de este Grupo</button>
         </div>
 
         <div class="card">
@@ -45,7 +55,6 @@
         </div>
     </div>
     
-    <!-- ES VITAL QUE DIGA type="module" -->
     <script type="module" src="script.js"></script>
 </body>
 </html>
