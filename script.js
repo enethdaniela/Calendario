@@ -1,10 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-// ==========================================
-// 1. CONFIGURACIÓN DE FIREBASE
-// REEMPLAZA ESTE BLOQUE CON TU firebaseConfig
-// ==========================================
 const firebaseConfig = {
   apiKey: "AIzaSyB81esQijTVdreLMWKgwTQElS9P56W5mME",
   authDomain: "horarios-amigas.firebaseapp.com",
@@ -15,28 +11,62 @@ const firebaseConfig = {
   measurementId: "G-DKBGYCV7Q7"
 };
 
-// Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// ==========================================
-// 2. LÓGICA DE LA APLICACIÓN
-// ==========================================
+// VARIABLES GLOBALES Y LÓGICA DE SALAS
+
 const bloques = [
     "07:00 - 08:20", "08:30 - 09:50", "10:00 - 11:20", 
     "11:30 - 12:50", "13:00 - 14:20", "14:30 - 15:50", 
     "16:00 - 17:20", "17:30 - 18:50"
 ];
 const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
-let datosHorarios = {};
 
-// Escuchar cambios en la base de datos en tiempo real
-const horariosRef = ref(db, 'horarios');
-onValue(horariosRef, (snapshot) => {
-    const data = snapshot.val();
-    datosHorarios = data || {};
-    actualizarUI();
-});
+let datosHorarios = {};
+let salaActual = localStorage.getItem('salaHorarios') || ''; 
+let listenerFirebase = null;
+
+// FUNCIONES DE SALAS (GRUPOS)
+
+function unirseASala() {
+    const inputSala = document.getElementById('nombre-sala').value.trim().toLowerCase();
+    if (!inputSala) {
+        alert("Por favor escribe el nombre de un grupo.");
+        return;
+    }
+    
+    // Guardamos la sala en la memoria local para que no la pierdas al recargar
+    salaActual = inputSala;
+    localStorage.setItem('salaHorarios', salaActual);
+    
+    conectarABaseDeDatos();
+}
+
+function conectarABaseDeDatos() {
+    if (!salaActual) {
+        document.getElementById('estado-sala').innerHTML = "🔴 No estás en ningún grupo. Escribe un código arriba.";
+        return;
+    }
+
+    document.getElementById('estado-sala').innerHTML = `🟢 Conectada al grupo: <strong>${salaActual.toUpperCase()}</strong>`;
+    document.getElementById('nombre-sala').value = '';
+
+    // Si ya estábamos escuchando otra sala, cancelamos esa conexión
+    if (listenerFirebase) {
+        listenerFirebase(); 
+    }
+
+    // Escuchamos SOLO los horarios de la sala actual
+    const horariosRef = ref(db, `salas/${salaActual}/horarios`);
+    listenerFirebase = onValue(horariosRef, (snapshot) => {
+        const data = snapshot.val();
+        datosHorarios = data || {};
+        actualizarUI();
+    });
+}
+
+// FUNCIONES DEL CALENDARIO
 
 function inicializarTablaIngreso() {
     const tabla = document.getElementById('tabla-ingreso');
@@ -55,9 +85,14 @@ function inicializarTablaIngreso() {
 }
 
 function guardarMiHorario() {
+    if (!salaActual) {
+        alert("¡Primero debes unirte a un grupo en la parte de arriba!");
+        return;
+    }
+
     const nombre = document.getElementById('nombre').value.trim();
     if (!nombre) {
-        alert("Por favor ingresa tu nombre primero.");
+        alert("Por favor ingresa tu nombre.");
         return;
     }
 
@@ -71,16 +106,13 @@ function guardarMiHorario() {
         });
     });
 
-    // Guardar en Firebase en lugar de localStorage
-    set(ref(db, 'horarios/' + nombre), horarioUsuario)
+    set(ref(db, `salas/${salaActual}/horarios/${nombre}`), horarioUsuario)
         .then(() => {
-            alert(`¡Horario de ${nombre} guardado en la nube!`);
+            alert(`¡Horario de ${nombre} guardado en el grupo ${salaActual.toUpperCase()}!`);
             document.getElementById('nombre').value = '';
             document.querySelectorAll('.input-clase').forEach(input => input.value = '');
         })
-        .catch((error) => {
-            alert("Error al guardar: " + error);
-        });
+        .catch((error) => alert("Error al guardar: " + error));
 }
 
 function actualizarUI() {
@@ -139,8 +171,9 @@ function mostrarHorarioIndividual() {
 }
 
 function limpiarDatos() {
-    if(confirm("¿Estás segura de borrar todos los horarios de la nube?")) {
-        remove(ref(db, 'horarios'));
+    if (!salaActual) return;
+    if(confirm(`¿Estás segura de borrar todos los horarios del grupo ${salaActual.toUpperCase()}?`)) {
+        remove(ref(db, `salas/${salaActual}/horarios`));
         document.getElementById('resultados').innerHTML = '';
     }
 }
@@ -163,7 +196,6 @@ function compararHorarios() {
         let bloquesLibresDelDia = [];
         let primerBloqueOcupadoIndex = -1;
 
-        // 1. Encontrar cuál es la PRIMERA clase del día para este grupo de personas
         for (let i = 0; i < bloques.length; i++) {
             let bloque = bloques[i];
             let alguienTieneClase = seleccionadas.some(nombre => datosHorarios[nombre][dia][bloque]);
@@ -173,10 +205,8 @@ function compararHorarios() {
             }
         }
 
-        // Si nadie tiene clases en todo el día, ignoramos el día entero para no mostrar desde las 7:00 AM
         if (primerBloqueOcupadoIndex === -1) return;
 
-        // 2. Buscar huecos libres SOLO desde la hora de la primera clase en adelante
         for (let i = primerBloqueOcupadoIndex; i < bloques.length; i++) {
             let bloque = bloques[i];
             let bloqueOcupadoPorAlguien = seleccionadas.some(nombre => datosHorarios[nombre][dia][bloque]);
@@ -202,11 +232,13 @@ function compararHorarios() {
     }
 }
 
-// Asignar eventos a los botones
+// Asignar eventos
+document.getElementById('btn-unirse').addEventListener('click', unirseASala);
 document.getElementById('btn-guardar').addEventListener('click', guardarMiHorario);
 document.getElementById('btn-borrar').addEventListener('click', limpiarDatos);
 document.getElementById('btn-comparar').addEventListener('click', compararHorarios);
 document.getElementById('selector-ver-horario').addEventListener('change', mostrarHorarioIndividual);
 
-// Iniciar
+// Iniciar aplicación
 inicializarTablaIngreso();
+conectarABaseDeDatos();
